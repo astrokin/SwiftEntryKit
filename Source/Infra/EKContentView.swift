@@ -649,12 +649,12 @@ extension EKContentView {
                 if !attributes.scroll.isEdgeCrossingEnabled {
                     switch attributes.position {
                     case .top:
-                        let inset = EKWindowProvider.safeAreaInsets.top
+                        let inset = entryDelegate.safeAreaInsets.top
                         if targetConstant > inset {
                             targetConstant = inset
                         }
                     case .bottom, .center:
-                        let inset = EKWindowProvider.safeAreaInsets.bottom
+                        let inset = entryDelegate.safeAreaInsets.bottom
                         if targetConstant < -inset {
                             targetConstant = -inset
                         }
