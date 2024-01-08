@@ -187,14 +187,14 @@ final class EKWindowProvider: EntryPresenterDelegate, EntryViewDelegate {
     
     /** Dismiss entries according to a given descriptor */
     func dismiss(_ descriptor: SwiftEntryKit.EntryDismissalDescriptor, with completion: SwiftEntryKit.DismissCompletionHandler? = nil) {
-        if let completion {
-            pendingCompletions.append(completion)
+        guard let rootVC = rootVC else {
+            return
         }
         
-        guard let rootVC = rootVC, isCurrentlyDismissing != true else {
-            isCurrentlyDismissing = false
-            pendingCompletions.forEach({ $0() })
-            pendingCompletions = []
+        if isCurrentlyDismissing == true {
+            if let completion {
+                pendingCompletions.append(completion)
+            }
             return
         }
         
@@ -202,6 +202,7 @@ final class EKWindowProvider: EntryPresenterDelegate, EntryViewDelegate {
         
         let _completion: SwiftEntryKit.DismissCompletionHandler = { [weak self] in
             self?.isCurrentlyDismissing = false
+            completion?()
             self?.pendingCompletions.forEach({ $0() })
             self?.pendingCompletions = []
         }
