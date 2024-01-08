@@ -19,6 +19,9 @@ final class EKWindowProvider: EntryPresenterDelegate, EntryViewDelegate {
             return UIEdgeInsets(top: statusBarMaxY, left: 0, bottom: 10, right: 0)
         }
     }
+    
+    private var isCurrentlyDismissing: Bool?
+    private var pendingCompletions: [SwiftEntryKit.DismissCompletionHandler] = []
 
     /** Current entry window */
     var entryWindow: EKWindow!
@@ -184,28 +187,43 @@ final class EKWindowProvider: EntryPresenterDelegate, EntryViewDelegate {
     
     /** Dismiss entries according to a given descriptor */
     func dismiss(_ descriptor: SwiftEntryKit.EntryDismissalDescriptor, with completion: SwiftEntryKit.DismissCompletionHandler? = nil) {
-        guard let rootVC = rootVC else {
+        if let completion {
+            pendingCompletions.append(completion)
+        }
+        
+        guard let rootVC = rootVC, isCurrentlyDismissing != true else {
+            isCurrentlyDismissing = false
+            pendingCompletions.forEach({ $0() })
+            pendingCompletions = []
             return
+        }
+        
+        isCurrentlyDismissing = true
+        
+        let _completion: SwiftEntryKit.DismissCompletionHandler = { [weak self] in
+            self?.isCurrentlyDismissing = false
+            self?.pendingCompletions.forEach({ $0() })
+            self?.pendingCompletions = []
         }
         
         switch descriptor {
         case .displayed:
-            rootVC.animateOutLastEntry(completionHandler: completion)
+            rootVC.animateOutLastEntry(completionHandler: _completion)
         case .specific(entryName: let name):
             entryQueue.removeEntries(by: name)
             if entryView?.attributes.name == name {
-                rootVC.animateOutLastEntry(completionHandler: completion)
+                rootVC.animateOutLastEntry(completionHandler: _completion)
             }
         case .prioritizedLowerOrEqualTo(priority: let priorityThreshold):
             entryQueue.removeEntries(withPriorityLowerOrEqualTo: priorityThreshold)
             if let currentPriority = entryView?.attributes.precedence.priority, currentPriority <= priorityThreshold {
-                rootVC.animateOutLastEntry(completionHandler: completion)
+                rootVC.animateOutLastEntry(completionHandler: _completion)
             }
         case .enqueued:
             entryQueue.removeAll()
         case .all:
             entryQueue.removeAll()
-            rootVC.animateOutLastEntry(completionHandler: completion)
+            rootVC.animateOutLastEntry(completionHandler: _completion)
         }
     }
     
